@@ -1,0 +1,4 @@
+ALTER TABLE bookings
+  ADD COLUMN IF NOT EXISTS event_id BIGINT,
+  ADD COLUMN IF NOT EXISTS event_start_time TIMESTAMP,
+  ADD COLUMN IF NOT EXISTS price_per_ticket NUMERIC(10,2);

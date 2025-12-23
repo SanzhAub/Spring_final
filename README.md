@@ -1,177 +1,59 @@
-# Spring Final Project — Booking Service (MVP)
+# Cinema Ticketing (Final Project — upgraded from MVP)
 
-This repository contains a microservice-based MVP for a cinema booking system, created as part of the Spring Framework final project.  
-The system demonstrates REST API development with Spring Boot, PostgreSQL integration using Flyway, event-driven communication using Kafka, and full containerization using Docker Compose.
+This repo is being upgraded step-by-step to match the **Final exam requirements**: microservices, REST + Kafka, DB + Flyway, Swagger, testing, and later Keycloak.
 
----
+## Step 1 architecture (already implemented)
 
-## Tech Stack
+**event-service (catalog)**  → (REST) → **booking-service** → (Kafka `booking-events`) → **notification-service**  → (Kafka `notification-events`) → **booking-service**
 
-**Backend:**
-- Java 17
-- Spring Boot
-- Spring Web
-- Spring Data JPA
-- Flyway
-- Apache Kafka
+### Flow
+1) **event-service** stores events (movie, start time, price, available seats).
+2) **booking-service** creates bookings **only after validating the event via REST**.
+3) booking-service publishes Kafka event `BookingCreated` to topic **`booking-events`**.
+4) **notification-service** (currently still named `notification-consumer`) consumes `booking-events`, simulates sending email, and publishes `NotificationSent` to topic **`notification-events`**.
+5) booking-service consumes `notification-events` and updates booking status → `NOTIFIED`.
 
-**Infrastructure:**
-- PostgreSQL
-- Docker & Docker Compose
-- Swagger / OpenAPI
+## Services & Ports
+- `event-service` : **8082**
+- `booking-service`: **8081**
+- `notification-consumer` (notification-service): **8083**
+- `kafka-ui`: **8089**
+- Postgres: booking_db **5433**, event_db **5434**, notification_db **5435**
 
----
-
-## Architecture Overview
-
-The project consists of two microservices:
-
-### booking-service
-- Exposes REST API
-- Persists data to PostgreSQL
-- Publishes `BookingCreatedEvent` to Kafka
-
-### notification-consumer
-- Listens to Kafka topic `booking-events`
-- Logs consumed events (simulated notifications)
-
----
-
-## High-Level Data Flow
-
-```
-Client → booking-service (REST) → PostgreSQL
-                                ↘
-                                 Kafka topic "booking-events"
-                                               ↘
-                                        notification-consumer
-```
-
----
-
-## How to Run
-
-### Requirements
-- Docker
-- Docker Compose
-
-### Start All Services
-
-Run from root directory:
-
+## Run (Docker)
 ```bash
 docker compose up --build
 ```
 
-This will:
-- Start PostgreSQL
-- Start Kafka & Zookeeper
-- Build booking-service and notification-consumer
-- Apply Flyway migrations
-- Run both microservices
-
----
-
-## Swagger UI
-
-Once booking-service is running:
-
-http://localhost:8080/swagger-ui/index.html  
-or  
-http://localhost:8080/swagger-ui.html
-
----
-
-## 📡 API Endpoints
-
-Base URL: `http://localhost:8080/api/bookings`
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| POST   | `/api/bookings`        | Create a new booking |
-| GET    | `/api/bookings`        | Get all bookings |
-| GET    | `/api/bookings/{id}`   | Get booking by ID |
-| DELETE | `/api/bookings/{id}`   | Delete a booking |
-| GET    | `/api/bookings/health` | Health check |
-
----
-
-## 🗄️ Database (Flyway)
-
-Flyway migrations are stored in:
-
-```
-booking-service/src/main/resources/db/migration/
+## Demo flow
+### 1) Create an event
+```bash
+curl -X POST http://localhost:8082/api/admin/events \
+  -H 'Content-Type: application/json' \
+  -d '{"movieTitle":"Interstellar","startTime":"2025-12-25T19:30:00","pricePerTicket":12.5,"availableSeats":50}'
 ```
 
-### Migration File: `V1__create_booking_table.sql`
-
-```sql
-CREATE TABLE IF NOT EXISTS bookings (
-    id BIGSERIAL PRIMARY KEY,
-    movie_title        VARCHAR(255) NOT NULL,
-    customer_name      VARCHAR(255) NOT NULL,
-    customer_email     VARCHAR(255) NOT NULL,
-    number_of_tickets  INT          NOT NULL,
-    total_price        NUMERIC(10,2) NOT NULL,
-    booking_time       TIMESTAMP    NOT NULL DEFAULT NOW(),
-    status             VARCHAR(50)  NOT NULL
-);
+### 2) List events
+```bash
+curl http://localhost:8082/public/events
 ```
 
----
-
-## 📂 Project Structure
-
-```
-Spring_final/
-│
-├── booking-service/
-│   ├── src/main/java/.../controller
-│   ├── src/main/java/.../service
-│   ├── src/main/java/.../entity
-│   ├── src/main/java/.../event
-│   ├── src/main/resources/application.properties
-│   └── src/main/resources/db/migration/V1__create_booking_table.sql
-│
-├── notification-consumer/
-│   ├── src/main/java/.../consumer
-│   ├── src/main/resources/application.properties
-│
-└── docker-compose.yml
+### 3) Create a booking (use `eventId` from step 2)
+```bash
+curl -X POST http://localhost:8081/api/bookings \
+  -H 'Content-Type: application/json' \
+  -d '{"eventId":1,"customerName":"Aza","customerEmail":"aza@example.com","numberOfTickets":2}'
 ```
 
----
+### 4) Check booking status
+```bash
+curl http://localhost:8081/api/bookings/1
+```
+After notification-service processes the Kafka event, the status should become **`NOTIFIED`**.
 
-## 🎧 Kafka Integration
+## Swagger
+- booking-service: http://localhost:8081/swagger-ui.html
+- event-service: http://localhost:8082/swagger-ui.html
+- notification-service: http://localhost:8083/swagger-ui.html
 
-### Producer (booking-service):
-Publishes events to topic `booking-events`.
-
-### Consumer (notification-consumer):
-Reads events from the same topic and logs them.
-
-This simulates an asynchronous notification system.
-
----
-
-## 📝 Notes
-
-This project demonstrates:
-- Microservice architecture
-- Clean REST API design
-- PostgreSQL + Flyway database migration
-- Kafka-based communication
-- Dockerized deployment
-
-It fully satisfies requirements for the Spring Final Project MVP.
-
----
-
-## 👤 Authors
-
-**Aubakirov Sanzhar**  
-**Aziza Gilash**  
-
-KBTU — Information Systems  
-Spring Framework Final Project (2025)
+> Next steps: DB + Flyway for notification-service, Keycloak roles, PUT/PATCH, and full test suite.
