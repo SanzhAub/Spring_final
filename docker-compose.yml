@@ -1,5 +1,9 @@
+version: "3.9"
+
 services:
-  # Kafka
+  # =======================
+  # Kafka stack
+  # =======================
   zookeeper:
     image: confluentinc/cp-zookeeper:7.5.0
     environment:
@@ -34,7 +38,9 @@ services:
       KAFKA_CLUSTERS_0_NAME: local
       KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:9092
 
+  # =======================
   # Databases
+  # =======================
   booking-db:
     image: postgres:15
     environment:
@@ -62,13 +68,35 @@ services:
     ports:
       - "5435:5432"
 
+  # =======================
+  # Keycloak (SECURITY CORE)
+  # =======================
+  keycloak:
+    image: quay.io/keycloak/keycloak:25.0.6
+    command: start-dev --import-realm
+    environment:
+      KEYCLOAK_ADMIN: admin
+      KEYCLOAK_ADMIN_PASSWORD: admin
+      KC_HOSTNAME: keycloak
+      KC_HOSTNAME_STRICT: "false"
+      KC_PROXY: edge
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./keycloak/import:/opt/keycloak/data/import
+
+  # =======================
   # Services
+  # =======================
   event-service:
     build: ./event-service
     depends_on:
       - event-db
+      - keycloak
     ports:
       - "8082:8082"
+    environment:
+      SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI: http://keycloak:8080/realms/spring-final
 
   booking-service:
     build: ./booking-service
@@ -76,13 +104,19 @@ services:
       - booking-db
       - kafka
       - event-service
+      - keycloak
     ports:
       - "8081:8081"
+    environment:
+      SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI: http://keycloak:8080/realms/spring-final
 
   notification-consumer:
     build: ./notification-consumer
     depends_on:
       - kafka
       - notification-db
+      - keycloak
     ports:
       - "8083:8083"
+    environment:
+      SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI: http://keycloak:8080/realms/spring-final
