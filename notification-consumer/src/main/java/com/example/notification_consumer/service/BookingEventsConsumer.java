@@ -1,6 +1,5 @@
 package com.example.notification_consumer.service;
 
-import com.example.notification_consumer.entity.Notification;
 import com.example.notification_consumer.event.BookingCreatedEvent;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
@@ -22,18 +21,20 @@ public class BookingEventsConsumer {
             BookingCreatedEvent event =
                     objectMapper.readValue(message, BookingCreatedEvent.class);
 
-            log.info("BOOKING EVENT received bookingId={}", event.getBookingId());
-            log.error(">>> CREATE QUEUED CALLED <<<");
-            Notification notification =
-                    notificationService.createQueued(
-                            event.getBookingId(),
-                            event.getCustomerEmail()
-                    );
+            log.info("Booking event received: bookingID={}, customer={}", 
+                    event.getBookingId(), event.getCustomerEmail());
 
-            notificationService.sendNow(notification, false);
+            // ТОЛЬКО создаем уведомление в статусе QUEUED
+            // Отправка будет в NotificationService.sendNow()
+            notificationService.createQueued(
+                    event.getBookingId(),
+                    event.getCustomerEmail()
+            );
+
+            log.info("The notification was created for bookingID={}", event.getBookingId());
 
         } catch (Exception e) {
-            log.error("Error processing booking event", e);
+            log.error("Error processing booking-events: {}", e.getMessage(), e);
         }
     }
 }

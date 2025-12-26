@@ -3,11 +3,8 @@ package com.example.booking_service.dto;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.*;
 
-@Schema(description = "Request to create a booking")
-public record CreateBookingRequest(
-    @Schema(description = "Event ID", example = "1", requiredMode = Schema.RequiredMode.REQUIRED)
-    @NotNull Long eventId,
-    
+@Schema(description = "Request to update a booking")
+public record UpdateBookingRequest(
     @Schema(description = "Customer name", example = "John Doe", requiredMode = Schema.RequiredMode.REQUIRED)
     @NotBlank String customerName,
     

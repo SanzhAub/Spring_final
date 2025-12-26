@@ -7,6 +7,7 @@ import com.example.notification_consumer.repository.DeliveryAttemptRepository;
 import com.example.notification_consumer.repository.NotificationRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -21,11 +22,12 @@ public class NotificationService {
     private final KafkaProducerService kafkaProducerService;
 
     /**
-     * Создаём уведомление в статусе QUEUED
+     * Создаём уведомление в статусе QUEUED и сразу отправляем
      */
     @Transactional
-    public Notification createQueued(Long bookingId, String email) {
-        log.error(">>> SAVING NOTIFICATION bookingId={} <<<", bookingId);
+    public void createQueued(Long bookingId, String email) {
+        log.info("Creating a notification for bookingID={}", bookingId);
+        
         Notification notification = Notification.builder()
                 .bookingId(bookingId)
                 .email(email)
@@ -34,14 +36,17 @@ public class NotificationService {
                 .build();
 
         Notification saved = notificationRepository.save(notification);
-        log.info("Notification QUEUED saved id={}", saved.getId());
-        return saved;
+        log.info("Notification QUEUED created by id={}", saved.getId());
+        
+        // Отправляем уведомление (симуляция)
+        sendNow(saved);
     }
 
     /**
      * Пытаемся отправить уведомление
      */
-    public void sendNow(Notification notification, boolean simulateFail) {
+    @Async
+    public void sendNow(Notification notification) {
         DeliveryAttempt attempt = DeliveryAttempt.builder()
                 .notification(notification)
                 .retryCount(0)
@@ -49,15 +54,14 @@ public class NotificationService {
                 .build();
 
         try {
-            if (simulateFail) {
-                throw new RuntimeException("Simulated email failure");
-            }
-
+            // Симуляция отправки email (всегда успешно)
+            Thread.sleep(1000); // Имитация задержки
+            
             notification.setStatus(NotificationStatus.SENT);
             notification.setSentAt(LocalDateTime.now());
-
             notificationRepository.save(notification);
 
+            // Отправляем событие в Kafka
             NotificationSentEvent event = new NotificationSentEvent();
             event.setBookingId(notification.getBookingId());
             event.setCustomerEmail(notification.getEmail());
@@ -66,7 +70,7 @@ public class NotificationService {
 
             kafkaProducerService.publishNotificationSent(event);
 
-            log.info("Notification SENT bookingId={}", notification.getBookingId());
+            log.info("Notification sent by BookingID={}", notification.getBookingId());
 
         } catch (Exception e) {
             notification.setStatus(NotificationStatus.FAILED);
@@ -74,7 +78,7 @@ public class NotificationService {
             notificationRepository.save(notification);
 
             attempt.setLastError(e.getMessage());
-            log.error("Notification FAILED bookingId={}", notification.getBookingId(), e);
+            log.error("The notification was not sent BookingID={}", notification.getBookingId(), e);
         }
 
         deliveryAttemptRepository.save(attempt);

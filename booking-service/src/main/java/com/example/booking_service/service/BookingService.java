@@ -4,6 +4,7 @@ import com.example.booking_service.client.EventClient;
 import com.example.booking_service.client.EventResponse;
 import com.example.booking_service.dto.BookingResponse;
 import com.example.booking_service.dto.CreateBookingRequest;
+import com.example.booking_service.dto.UpdateBookingRequest;
 import com.example.booking_service.entity.Booking;
 import com.example.booking_service.event.BookingCreatedEvent;
 import com.example.booking_service.exception.BadRequestException;
@@ -36,37 +37,56 @@ public class BookingService {
             throw new BadRequestException("Not enough seats for event id=" + req.eventId());
         }
 
-        // 2) Persist booking
+        // 2) Persist booking first to get ID
         Booking booking = new Booking();
         booking.setEventId(req.eventId());
         booking.setMovieTitle(event.movieTitle());
         booking.setEventStartTime(event.startTime());
         booking.setPricePerTicket(event.pricePerTicket());
-
         booking.setCustomerName(req.customerName());
         booking.setCustomerEmail(req.customerEmail());
         booking.setNumberOfTickets(req.numberOfTickets());
-
         BigDecimal total = event.pricePerTicket()
                 .multiply(BigDecimal.valueOf(req.numberOfTickets()));
-
         booking.setTotalPrice(total);
         booking.setStatus(BookingStatus.CONFIRMED.name());
-
+        
         Booking saved = bookingRepository.save(booking);
 
-        // 3) Publish Kafka event BookingCreated
-        BookingCreatedEvent evt = new BookingCreatedEvent();
-        evt.setBookingId(saved.getId());
-        evt.setEventId(saved.getEventId());
-        evt.setMovieTitle(saved.getMovieTitle());
-        evt.setCustomerEmail(saved.getCustomerEmail());
-        evt.setNumberOfTickets(saved.getNumberOfTickets());
-        evt.setBookingTime(saved.getBookingTime());
+        try {
+            // 3) Reserve seats in event service
+            boolean reserved = eventClient.reserveSeats(
+                req.eventId(), 
+                req.numberOfTickets(), 
+                saved.getId()
+            );
+            
+            if (!reserved) {
+                // Rollback booking if reservation failed
+                bookingRepository.delete(saved);
+                throw new BadRequestException("Failed to reserve seats");
+            }
+            
+            // 4) Publish Kafka event
+            BookingCreatedEvent evt = new BookingCreatedEvent();
+            evt.setBookingId(saved.getId());
+            evt.setEventId(saved.getEventId());
+            evt.setMovieTitle(saved.getMovieTitle());
+            evt.setCustomerName(saved.getCustomerName());  // ДОБАВЛЯЕМ
+            evt.setCustomerEmail(saved.getCustomerEmail());
+            evt.setNumberOfTickets(saved.getNumberOfTickets());
+            evt.setTotalPrice(saved.getTotalPrice());      // ДОБАВЛЯЕМ
+            evt.setBookingTime(saved.getBookingTime());
 
-        kafkaProducer.sendBookingEvent(evt);
-
-        return toResponse(saved);
+            kafkaProducer.sendBookingEvent(evt);
+            
+            return toResponse(saved);
+            
+        } catch (Exception e) {
+            // If anything fails after saving booking, delete it
+            bookingRepository.delete(saved);
+            throw e;
+        }
     }
 
     public BookingResponse getBooking(Long id) {
@@ -102,4 +122,46 @@ public class BookingService {
                 b.getStatus()
         );
     }
+
+    @Transactional
+    public BookingResponse updateBooking(Long id, UpdateBookingRequest req) {
+        Booking booking = bookingRepository.findById(id)
+                .orElseThrow(() -> new NotFoundException("Booking with id=" + id + " not found"));
+
+        booking.setCustomerName(req.customerName());
+        booking.setCustomerEmail(req.customerEmail());
+        booking.setNumberOfTickets(req.numberOfTickets());
+
+        BigDecimal total = booking.getPricePerTicket()
+                .multiply(BigDecimal.valueOf(req.numberOfTickets()));
+        booking.setTotalPrice(total);
+
+        return toResponse(booking);
+    }
+
+    @Transactional
+    public BookingResponse updateStatus(Long id, String status) {
+        Booking booking = bookingRepository.findById(id)
+                .orElseThrow(() -> new NotFoundException("Booking with id=" + id + " not found"));
+
+        booking.setStatus(status);
+        return toResponse(booking);
+    }
+
+
+    @Transactional
+    public void cancelBooking(Long id) {
+        Booking booking = bookingRepository.findById(id)
+                .orElseThrow(() -> new NotFoundException("Booking not found"));
+        
+        eventClient.cancelReservation(
+            booking.getEventId(),
+            booking.getNumberOfTickets(),
+            booking.getId()
+        );
+        
+        booking.setStatus("CANCELLED");
+        bookingRepository.save(booking);
+    }
+    
 }

@@ -20,24 +20,28 @@ public class NotificationEventsConsumer {
     @KafkaListener(topics = "notification-events", groupId = "booking-status-group")
     public void consume(String message) {
         try {
+            log.info("Notification event received: {}", message);
+            
             NotificationSentEvent evt = objectMapper.readValue(message, NotificationSentEvent.class);
+            
             if (evt.getBookingId() == null) {
-                log.warn("notification-events received without bookingId: {}", message);
+                log.warn("Event without bookingID: {}", message);
                 return;
             }
 
             bookingRepository.findById(evt.getBookingId()).ifPresentOrElse(booking -> {
                 if ("SENT".equalsIgnoreCase(evt.getStatus())) {
                     booking.setStatus(BookingStatus.NOTIFIED.name());
+                    log.info("Booking {} updated to NOTIFIED", booking.getId());
                 } else {
                     booking.setStatus(BookingStatus.NOTIFICATION_FAILED.name());
+                    log.warn("Booking {} - notification has not been sent", booking.getId());
                 }
                 bookingRepository.save(booking);
-                log.info("Booking {} status updated to {}", booking.getId(), booking.getStatus());
-            }, () -> log.warn("Booking {} not found while processing NotificationSentEvent", evt.getBookingId()));
+            }, () -> log.warn("Booking {} not found", evt.getBookingId()));
 
         } catch (Exception e) {
-            log.error("Failed to process notification-events message: {}", message, e);
+            log.error("Notification-events processing error: {}", e.getMessage(), e);
         }
     }
 }

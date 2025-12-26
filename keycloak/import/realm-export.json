@@ -1,0 +1,144 @@
+{
+  "realm": "spring-final",
+  "enabled": true,
+  "displayName": "Spring Final",
+  "registrationAllowed": false,
+  "editUsernameAllowed": false,
+  
+  "roles": {
+    "realm": [
+      { "name": "USER", "description": "Regular user" },
+      { "name": "ADMIN", "description": "Administrator role" }
+    ]
+  },
+  
+  "clients": [
+    {
+      "clientId": "spring-final-client",
+      "enabled": true,
+      "name": "Event Service Client",
+      "description": "Client for event service",
+      "publicClient": true,
+      "directAccessGrantsEnabled": true,
+      "standardFlowEnabled": true,
+      "implicitFlowEnabled": false,
+      "serviceAccountsEnabled": false,
+      "bearerOnly": false,
+      "webOrigins": ["http://localhost:8082"],
+      "redirectUris": ["http://localhost:8082/*"],
+      "attributes": {
+        "access.token.lifespan": "300",
+        "client.use.lifespan": "true"
+      },
+      "protocolMappers": [
+        {
+          "name": "realm roles",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-realm-role-mapper",
+          "config": {
+            "multivalued": "true",
+            "access.token.claim": "true",
+            "claim.name": "realm_access.roles",
+            "jsonType.label": "String",
+            "userinfo.token.claim": "true",
+            "id.token.claim": "true"
+          }
+        },
+        {
+          "name": "username",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-property-mapper",
+          "config": {
+            "user.attribute": "username",
+            "access.token.claim": "true",
+            "claim.name": "preferred_username",
+            "jsonType.label": "String"
+          }
+        }
+      ]
+    },
+    {
+      "clientId": "admin-cli",
+      "enabled": true,
+      "publicClient": true,
+      "directAccessGrantsEnabled": true,
+      "standardFlowEnabled": false,
+      "implicitFlowEnabled": false,
+      "serviceAccountsEnabled": false,
+      "bearerOnly": false,
+      "protocolMappers": [
+        {
+          "name": "realm roles",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-realm-role-mapper",
+          "config": {
+            "multivalued": "true",
+            "access.token.claim": "true",
+            "claim.name": "realm_access.roles",
+            "jsonType.label": "String",
+            "userinfo.token.claim": "true",
+            "id.token.claim": "true"
+          }
+        }
+      ]
+    }
+  ],
+  
+  "users": [
+    {
+      "username": "user",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "User",
+      "lastName": "User",
+      "email": "user@test.com",
+      "credentials": [
+        { 
+          "type": "password", 
+          "value": "user", 
+          "temporary": false 
+        }
+      ],
+      "realmRoles": ["USER"],
+      "requiredActions": [],
+      "clientRoles": {
+        "spring-final-client": ["USER"],
+        "admin-cli": ["USER"]
+      }
+    },
+    {
+      "username": "admin",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "System",
+      "lastName": "Administrator",
+      "email": "admin@example.com",
+      "credentials": [
+        { 
+          "type": "password", 
+          "value": "admin", 
+          "temporary": false 
+        }
+      ],
+      "realmRoles": ["ADMIN", "USER"],
+      "requiredActions": [],
+      "clientRoles": {
+        "spring-final-client": ["ADMIN"],
+        "admin-cli": ["ADMIN"]
+      }
+    }
+  ],
+  
+  "defaultRoles": ["USER"],
+  
+  "scopeMappings": [
+    {
+      "client": "spring-final-client",
+      "roles": ["ADMIN", "USER"]
+    },
+    {
+      "client": "admin-cli",
+      "roles": ["ADMIN", "USER"]
+    }
+  ]
+}
