@@ -4,7 +4,9 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="566e99f9-8a7b-4b69-91b3-55ff6d67d5c4" name="Changes" comment="" />
+    <list default="true" id="566e99f9-8a7b-4b69-91b3-55ff6d67d5c4" name="Changes" comment="">
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+    </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -12,6 +14,9 @@
   </component>
   <component name="Git.Settings">
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
+  </component>
+  <component name="ProblemsViewState">
+    <option name="selectedTabId" value="CurrentFile" />
   </component>
   <component name="ProjectColorInfo">{
   &quot;associatedIndex&quot;: 1
@@ -28,18 +33,20 @@
   "keyToString": {
     "ModuleVcsDetector.initialDetectionPerformed": "true",
     "RunOnceActivity.ShowReadmeOnStart": "true",
+    "RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252": "true",
     "RunOnceActivity.git.unshallow": "true",
-    "git-widget-placeholder": "feature/readme-and-migration",
+    "git-widget-placeholder": "fix/final-polish",
     "kotlin-language-version-configured": "true",
     "last_opened_file_path": "/Users/azizagilash/Downloads/Spring_final-main"
   }
 }]]></component>
   <component name="RecentsManager">
     <key name="MoveFile.RECENT_KEYS">
-      <recent name="$PROJECT_DIR$/notification-consumer/src/main/java/com/example/notification_consumer/entity" />
-      <recent name="$PROJECT_DIR$/notification-consumer/src/main/resources/db/migration" />
-      <recent name="$PROJECT_DIR$/notification-consumer/src/main" />
-      <recent name="$PROJECT_DIR$/notification-consumer/src/main/java/com/example/notification_consumer" />
+      <recent name="$PROJECT_DIR$/notification-consumer/src/test/java/com/example/notification_consumer" />
+      <recent name="$PROJECT_DIR$/event-service/src/test/java/com/example/event_service/service" />
+      <recent name="$PROJECT_DIR$/event-service/src/test/java/com/example/event_service/controller" />
+      <recent name="$PROJECT_DIR$/event-service/src/test/java/com/example/event_service" />
+      <recent name="$PROJECT_DIR$/booking-service/src/test/java/com/example/booking_service/controller" />
     </key>
   </component>
   <component name="RunManager">
