@@ -34,26 +34,35 @@ This project models a simple **cinema booking** flow:
 ## Architecture
 
 ```
-                +------------------+
-                |   Notification   | 
-                |     service      | 
-                |     :8083        |
-                +--------+---------+
-                         |
-          +--------------+----------------+
-          |                               |
-+---------v----------+            +-------v-----------+
-|   Booking Service  |            |   Event Service   |
-|      :8082         |            |      :8081        |
-|  - JPA + Flyway    |  HTTP      |  - JPA + Flyway   |
-|  - Feign/Rest call +----------->|  - Seat mgmt      |
-|  - Publishes Kafka |            |                   |
-+---------+----------+            +---------+---------+
-          |                                 
-          | Kafka (booking events)                  
-+---------v----------+                 
-|      Kafka         |  + Kafka UI :8080
-+--------------------+
+           REST
+
++-------------------------+
+|     Event Service       |
+|     list of films       |
++-----------+-------------+
+            |
+            |
+            v
++-------------------------+
+|    Booking Service      |
+| booking creating        |
++-----------+-------------+
+            |
+            | Kafka
+            |
+            v
++----------------------------+
+| Notification Service       |
+| sending email              |
++------------+---------------+
+             |
+             | Kafka
+             |
+             v
++-------------------------+
+|   Booking Service       |
+|   update of status      |
++-------------------------+
 
 Databases:
 - PostgreSQL container `postgres` (per-service schemas/DBs via configuration)
@@ -67,7 +76,7 @@ Auth:
 
 | Service | Folder | Port (default) | Responsibility |
 |---|---|---:|---|
-| Notification Service | `api-gateway/` | **8083** | Messages, notifications |
+| Notification Service | `notification-consumer/` | **8083** | Messages, notifications |
 | Event Service | `event-service/` | **8081** | Events (movie sessions), seats, reservation logic |
 | Booking Service | `booking-service/` | **8082** | Booking lifecycle, communicates with Event Service, publishes booking events |
 | Kafka UI | (docker) | **8080** | Inspect topics/messages locally |
