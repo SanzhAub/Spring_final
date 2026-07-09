@@ -25,7 +25,7 @@ This project models a simple **cinema booking** flow:
 1. **Event Service** manages movie sessions (`Event`) and their seats (`Seat`).
 2. **Booking Service** creates bookings and interacts with Event Service (HTTP) to reserve/release seats.
 3. **Kafka** is used to publish booking events for asynchronous processing (e.g., notification workflow).
-4. **API Gateway** provides a single entrypoint and routes requests to services.
+4. **Notification Service** provides a single entrypoint and routes requests to services.
 5. **PostgreSQL + Flyway** are used per-service for persistent storage and migrations.
 6. **Keycloak** is included in the docker setup (security wiring can be enabled/extended as needed).
 
@@ -35,7 +35,8 @@ This project models a simple **cinema booking** flow:
 
 ```
                 +------------------+
-                |   API Gateway    |
+                |   Notification   | 
+                |     service      | 
                 |     :8083        |
                 +--------+---------+
                          |
@@ -66,7 +67,7 @@ Auth:
 
 | Service | Folder | Port (default) | Responsibility |
 |---|---|---:|---|
-| API Gateway | `api-gateway/` | **8083** | Single entrypoint, routes requests to backend services |
+| Notification Service | `api-gateway/` | **8083** | Messages, notifications |
 | Event Service | `event-service/` | **8081** | Events (movie sessions), seats, reservation logic |
 | Booking Service | `booking-service/` | **8082** | Booking lifecycle, communicates with Event Service, publishes booking events |
 | Kafka UI | (docker) | **8080** | Inspect topics/messages locally |
@@ -110,7 +111,7 @@ docker ps
 ```
 
 ### 3) Useful URLs
-- **API Gateway**: `http://localhost:8083`
+- **Notification Service**: `http://localhost:8083`
 - **Booking Service**: `http://localhost:8082`
 - **Event Service**: `http://localhost:8081`
 - **Kafka UI**: `http://localhost:8080`
@@ -123,7 +124,7 @@ docker ps
 Service configuration is stored in:
 - `booking-service/src/main/resources/application.properties`
 - `event-service/src/main/resources/application.properties`
-- `api-gateway/src/main/resources/application.properties`
+- `notification-service/src/main/resources/application.properties`
 
 Docker infra is defined in:
 - `docker-compose.yml`
@@ -165,9 +166,9 @@ cd booking-service
 mvn -q clean test
 ```
 
-**API Gateway**
+**Notification Service**
 ```bash
-cd api-gateway
+cd notification-consumer
 mvn -q clean test
 ```
 
