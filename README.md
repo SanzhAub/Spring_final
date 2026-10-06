@@ -34,35 +34,27 @@ This project models a simple **cinema booking** flow:
 ## Architecture
 
 ```
-           REST
-
-+-------------------------+
-|     Event Service       |
-|     list of films       |
-+-----------+-------------+
-            |
-            |
-            v
-+-------------------------+
-|    Booking Service      |
-| booking creating        |
-+-----------+-------------+
-            |
-            | Kafka
-            |
-            v
-+----------------------------+
-| Notification Service       |
-| sending email              |
-+------------+---------------+
-             |
-             | Kafka
-             |
-             v
-+-------------------------+
-|   Booking Service       |
-|   update of status      |
-+-------------------------+
+                +------------------+
+                |   API Gateway    |
+                |   Notification   | 
+                |     service      | 
+                |     :8083        |
+                +--------+---------+
+                         |
+          +--------------+----------------+
+          |                               |
++---------v----------+            +-------v-----------+
+|   Booking Service  |            |   Event Service   |
+|      :8082         |            |      :8081        |
+|  - JPA + Flyway    |  HTTP      |  - JPA + Flyway   |
+|  - Feign/Rest call +----------->|  - Seat mgmt      |
+|  - Publishes Kafka |            |                   |
++---------+----------+            +---------+---------+
+          |                                 
+          | Kafka (booking events)                  
++---------v----------+                 
+|      Kafka         |  + Kafka UI :8080
++--------------------+
 
 Databases:
 - PostgreSQL container `postgres` (per-service schemas/DBs via configuration)
